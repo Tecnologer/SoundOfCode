@@ -117,9 +117,9 @@ func (env *Envelope) Amplitude(t float64) float64 {
 
 ### Books
 
-1. "The Computer Music Tutorial" by Curtis Roads: This is a comprehensive resource that covers a wide range of topics in computer music, including sound synthesis.
-2. "Designing Sound" by Andy Farnell: This book provides a practical guide to creating sound effects using pure data, and it covers many principles of sound synthesis.
-3. "Musimathics: The Mathematical Foundations of Music, Volume 1" by Gareth Loy: This book provides a deep dive into the mathematics behind music and sound, including the physics of sound waves and the principles of harmony and scales.
+1. ["The Computer Music Tutorial"][1] by Curtis Roads: This is a comprehensive resource that covers a wide range of topics in computer music, including sound synthesis.
+2. ["Designing Sound"][2] by Andy Farnell: This book provides a practical guide to creating sound effects using pure data, and it covers many principles of sound synthesis.
+3. ["Musimathics: The Mathematical Foundations of Music, Volume 1"][3] by Gareth Loy: This book provides a deep dive into the mathematics behind music and sound, including the physics of sound waves and the principles of harmony and scales.
 
 ### Online Resources
 
@@ -132,3 +132,8 @@ func (env *Envelope) Amplitude(t float64) float64 {
 1. Introduction to Digital Sound Design: This online course from Kadenze covers the basics of sound design, including sound synthesis.
 2. Audio Signal Processing for Music Applications: This course on Coursera provides a good introduction to the signal processing techniques used in music production, including sound synthesis.
 3. Remember, the best way to learn is to experiment and listen to the results. Don't be afraid to try different things and see what sounds you can create.
+
+
+[1]: https://www.amazon.com.mx/Computer-Music-Tutorial-second/dp/0262044919/
+[2]: https://www.amazon.com/-/es/Andy-Farnell/dp/0262014416/
+[3]: https://www.amazon.com/-/es/Gareth-Loy/dp/0262516551/

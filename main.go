@@ -20,6 +20,7 @@ import (
 	"github.com/ebitengine/oto/v3"
 	"io"
 	"math"
+	"math/rand"
 	"runtime"
 	"time"
 )
@@ -285,14 +286,14 @@ func (env *Envelope) Amplitude(t float64) float64 {
 
 func generateOvertone(p int64, seedFreq, seedAmp, length float64) (overtone float32) {
 	var (
+		r                 = rand.New(rand.NewSource(time.Now().UnixNano()))
 		freqOvertone      float64
-		amplitudeOvertone = seedAmp + 0.08
-		//r                 = rand.New(rand.NewSource(time.Now().UnixNano()))
+		amplitudeOvertone = seedAmp * r.Float64()
 	)
 
 	for i := 0; i < maxOvertone; i++ {
 		freqOvertone = seedFreq * float64(i+2)
-		amplitudeOvertone += 0.08
+		amplitudeOvertone += 0.01
 
 		overtone += float32(math.Sin(freqOvertone*math.Pi*float64(p)/length) * amplitudeOvertone)
 	}
