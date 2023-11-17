@@ -9,6 +9,11 @@ This document outlines the key principles of sound generation, including relevan
 3. [Overtones and Harmonics](#overtones-and-harmonics)
 4. [ADSR Envelope](#adsr-envelope)
 5. [Sound Synthesis in Go](#sound-synthesis-in-go)
+6. [Run](#run)
+7. [Resources](#resources)
+    1. [Books](#books)
+    2. [Online Resources](#online-resources)
+    3. [Online Courses](#online-courses)
 
 ## Introduction
 
@@ -17,7 +22,10 @@ Sound synthesis is the process of generating sound artificially, often with the 
 ## Waveforms
 
 Sound is a type of wave. The most basic waveform is the sine wave, represented by the formula:
+
+```text
 y(t) = A * sin(2 * π * f * t + φ)
+```
 
 
 Where:
@@ -39,7 +47,9 @@ However, the exact number of overtones to include will depend on the specific so
 ## Frequencies of Piano Keys
 
 The frequencies of the keys on a piano are determined by the formula:
+```text
 f = refFreq * 2^((n-refKey)/12)
+```
 
 
 Where:
