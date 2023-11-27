@@ -82,6 +82,11 @@ The ADSR envelope is used to shape the amplitude of a sound over time. It consis
 - **Sustain**: The level at which the sound is held as long as the note is held.
 - **Release**: The time it takes for the sound to reduce from the sustain level to zero after the note is released.
 
+>  During the Attack stage, the amplitude increases from 0 to its maximum level. 
+>  During the Decay stage, the amplitude decreases from its maximum level to the sustain level. 
+>  During the Sustain stage, the amplitude stays at the sustain level. During the Release stage, the amplitude decreases from the sustain level back to 0.
+
+
 ## Sound Synthesis in Go
 
 In Go, we can use the `math` package to generate waveforms and envelopes. Here's a basic example of a sine wave generator:

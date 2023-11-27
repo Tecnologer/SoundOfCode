@@ -1,17 +1,3 @@
-// Copyright 2019 The Oto Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
@@ -40,16 +26,14 @@ const (
 )
 
 type SineWave struct {
-	freq   float64
-	length int64
-	pos    int64
-
+	freq         float64
+	length       int64
+	pos          int64
 	channelCount int
 	format       oto.Format
-
-	remaining []byte
-	envelope  *Envelope
-	phase     float64
+	remaining    []byte
+	envelope     *Envelope
+	phase        float64
 }
 
 func formatByteLength(format oto.Format) int {
@@ -70,17 +54,17 @@ func NewSineWave(freq float64, duration time.Duration, channelCount int, format 
 	l = l / 4 * 4
 
 	// Calculate phase at end of note
-	currentPhase += 2.0 * math.Pi * freq * float64(duration)
+	endPhase := currentPhase + 2.0*math.Pi*freq*float64(duration)
 
 	// Use modulo operation to keep phase within range 0 to 2*pi
-	currentPhase = math.Mod(currentPhase, 2.0*math.Pi)
+	endPhase = math.Mod(endPhase, 2.0*math.Pi)
 
-	return &SineWave{
+	s := &SineWave{
 		freq:         freq,
 		length:       l,
 		channelCount: channelCount,
 		format:       format,
-		phase:        currentPhase,
+		phase:        currentPhase, // Start note at current phase
 		envelope: &Envelope{
 			Attack:  0.01,                    // Attack phase lasts 0.1 seconds
 			Decay:   0.2,                     // Decay phase lasts 0.2 seconds
@@ -88,6 +72,10 @@ func NewSineWave(freq float64, duration time.Duration, channelCount int, format 
 			Release: float64(duration) * 0.1, // Release phase lasts 0.5 seconds
 		},
 	}
+
+	currentPhase = endPhase // Update current phase to end phase of note
+
+	return s
 }
 
 func (s *SineWave) Read(buf []byte) (int, error) {
@@ -130,8 +118,12 @@ func (s *SineWave) Read(buf []byte) (int, error) {
 			// Generate the fundamental sine wave
 			fundamental := float32(math.Sin((freqFundamental*math.Pi*float64(p)/length + s.phase) * amplitudeFundamental))
 
-			// add envelope
-			fundamental *= float32(s.envelope.Amplitude(float64(p)))
+			// apply envelope
+			if float64(p) > length-s.envelope.Release {
+				fundamental *= float32((length - float64(p)) / s.envelope.Release)
+			} else {
+				fundamental *= float32(s.envelope.Amplitude(float64(p)))
+			}
 
 			// Generate an overtone at twice the frequency and half the amplitude
 			overtone := generateOvertone(p, freqOvertone, amplitudeOvertone, length, s.envelope.Release)
@@ -243,10 +235,20 @@ func run() error {
 
 	keys := []int{40, 40, 47, 47, 49, 49, 47, 45, 45, 44, 44, 42, 42, 40}
 	durations := []time.Duration{
-		500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond,
-		500 * time.Millisecond, 500 * time.Millisecond, 1000 * time.Millisecond,
-		500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond,
-		500 * time.Millisecond, 500 * time.Millisecond, 1000 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		1000 * time.Millisecond,
+		750 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		500 * time.Millisecond,
+		1000 * time.Millisecond,
 	}
 
 	//for keyNumber := totalKeys; keyNumber >= 1; keyNumber-- {
@@ -293,18 +295,21 @@ type Envelope struct {
 }
 
 func (env *Envelope) Amplitude(t float64) float64 {
+	total := env.Attack + env.Decay + env.Sustain + env.Release
 	if t < env.Attack {
 		// In the attack phase, the amplitude rises linearly to 1.
 		return t / env.Attack
 	} else if t < env.Attack+env.Decay {
 		// In the decay phase, the amplitude drops linearly to the sustain level.
 		return 1 - (t-env.Attack)/env.Decay*(1-env.Sustain)
+	} else if t < total-env.Release {
+		// In the sustain phase, the amplitude stays at the sustain level.
+		return env.Sustain
+	} else {
+		// In the release phase, use an exponential decay for a smoother decrease to 0.
+		releaseTime := t - (total - env.Release)
+		return env.Sustain * math.Exp(-(releaseTime / env.Release))
 	}
-
-	// In the sustain phase, the amplitude stays at the sustain level.
-	return env.Sustain
-
-	// The release phase is not handled in this example, but you could add it if you need it.
 }
 
 func generateOvertone(p int64, seedFreq, seedAmp, length float64, release float64) (overtone float32) {
