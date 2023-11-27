@@ -27,12 +27,12 @@ Sound is a type of wave. The most basic waveform is the sine wave, represented b
 y(t) = A * sin(2 * π * f * t + φ)
 ```
 
-
 Where:
-- `A` is the amplitude
-- `f` is the frequency
-- `t` is the time
-- `φ` is the phase
+
+- `A` is the amplitude, which determines the maximum height of the wave, or the 'loudness' of the sound.
+- `f` is the frequency, representing the number of cycles the wave completes per second. It's responsible for the 'pitch' of the sound - higher frequencies result in higher pitched sounds.
+- `t` is the time, which is a variable representing the specific point in time for which we are calculating the wave's position.
+- `φ` is the phase, which determines the initial position or 'starting point' of the wave in its cycle at t=0. It shifts the wave along the time axis, affecting the wave's alignment with the origin and other waves when multiple waves are combined.
 
 # Sound Generation in Go
 

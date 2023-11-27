@@ -29,6 +29,7 @@ var (
 	sampleRate   = flag.Int("samplerate", 48000, "sample rate")
 	channelCount = flag.Int("channel-count", 2, "number of channel")
 	format       = flag.String("format", "s16le", "source format (u8, s16le, or f32le)")
+	currentPhase = 0.0
 )
 
 const (
@@ -48,6 +49,7 @@ type SineWave struct {
 
 	remaining []byte
 	envelope  *Envelope
+	phase     float64
 }
 
 func formatByteLength(format oto.Format) int {
@@ -66,16 +68,24 @@ func formatByteLength(format oto.Format) int {
 func NewSineWave(freq float64, duration time.Duration, channelCount int, format oto.Format) *SineWave {
 	l := int64(channelCount) * int64(formatByteLength(format)) * int64(*sampleRate) * int64(duration) / int64(time.Second)
 	l = l / 4 * 4
+
+	// Calculate phase at end of note
+	currentPhase += 2.0 * math.Pi * freq * float64(duration)
+
+	// Use modulo operation to keep phase within range 0 to 2*pi
+	currentPhase = math.Mod(currentPhase, 2.0*math.Pi)
+
 	return &SineWave{
 		freq:         freq,
 		length:       l,
 		channelCount: channelCount,
 		format:       format,
+		phase:        currentPhase,
 		envelope: &Envelope{
-			Attack:  0.01, // Attack phase lasts 0.1 seconds
-			Decay:   0.2,  // Decay phase lasts 0.2 seconds
-			Sustain: 0.7,  // Sustain level is 70% of the maximum amplitude
-			Release: 0.5,  // Release phase lasts 0.5 seconds
+			Attack:  0.01,                    // Attack phase lasts 0.1 seconds
+			Decay:   0.2,                     // Decay phase lasts 0.2 seconds
+			Sustain: 0.7,                     // Sustain level is 70% of the maximum amplitude
+			Release: float64(duration) * 0.1, // Release phase lasts 0.5 seconds
 		},
 	}
 }
@@ -118,13 +128,14 @@ func (s *SineWave) Read(buf []byte) (int, error) {
 	case oto.FormatFloat32LE:
 		for i := 0; i < len(buf)/num; i++ {
 			// Generate the fundamental sine wave
-			fundamental := float32(math.Sin(freqFundamental*math.Pi*float64(p)/length) * amplitudeFundamental)
+			fundamental := float32(math.Sin((freqFundamental*math.Pi*float64(p)/length + s.phase) * amplitudeFundamental))
 
 			// add envelope
 			fundamental *= float32(s.envelope.Amplitude(float64(p)))
 
 			// Generate an overtone at twice the frequency and half the amplitude
-			overtone := generateOvertone(p, freqOvertone, amplitudeOvertone, length)
+			overtone := generateOvertone(p, freqOvertone, amplitudeOvertone, length, s.envelope.Release)
+			overtone += float32(math.Sin((freqOvertone*math.Pi*float64(p)/length + s.phase) * amplitudeOvertone))
 
 			// Add the fundamental and overtone together
 			sample := fundamental + overtone
@@ -230,9 +241,21 @@ func run() error {
 	waitDuration := getWaitDuration(duration)
 	fmt.Printf("Duration: %s, Wait duration: %s\n", duration, waitDuration)
 
-	for keyNumber := totalKeys; keyNumber >= 1; keyNumber-- {
+	keys := []int{40, 40, 47, 47, 49, 49, 47, 45, 45, 44, 44, 42, 42, 40}
+	durations := []time.Duration{
+		500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond,
+		500 * time.Millisecond, 500 * time.Millisecond, 1000 * time.Millisecond,
+		500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond, 500 * time.Millisecond,
+		500 * time.Millisecond, 500 * time.Millisecond, 1000 * time.Millisecond,
+	}
+
+	//for keyNumber := totalKeys; keyNumber >= 1; keyNumber-- {
+	for i, keyNumber := range keys {
 		key := pianoKeyFrequency(keyNumber)
 		fmt.Printf("Key %d: %.4f Hz\n", keyNumber, key)
+
+		duration := durations[i]
+		waitDuration := 500 * time.Millisecond
 
 		p := play(c, key, duration, op.ChannelCount, op.Format)
 		players = append(players, p)
@@ -284,18 +307,24 @@ func (env *Envelope) Amplitude(t float64) float64 {
 	// The release phase is not handled in this example, but you could add it if you need it.
 }
 
-func generateOvertone(p int64, seedFreq, seedAmp, length float64) (overtone float32) {
+func generateOvertone(p int64, seedFreq, seedAmp, length float64, release float64) (overtone float32) {
 	var (
 		r                 = rand.New(rand.NewSource(time.Now().UnixNano()))
 		freqOvertone      float64
 		amplitudeOvertone = seedAmp * r.Float64()
 	)
 
-	for i := 0; i < maxOvertone; i++ {
-		freqOvertone = seedFreq * float64(i+2)
-		amplitudeOvertone += 0.01
+	for i := 1; i <= maxOvertone; i++ {
+		freqOvertone = seedFreq * float64(i)
+		amplitudeOvertone *= 0.5 // decrease the amplitude for each overtone
 
-		overtone += float32(math.Sin(freqOvertone*math.Pi*float64(p)/length) * amplitudeOvertone)
+		phase := rand.Float64() * 2 * math.Pi // random phase for each overtone
+		overtone += float32(math.Sin((freqOvertone*math.Pi*float64(p)/length + phase) * amplitudeOvertone))
+	}
+
+	// Apply release envelope
+	if float64(p) > length-release {
+		amplitudeOvertone *= (length - float64(p)) / release
 	}
 
 	return

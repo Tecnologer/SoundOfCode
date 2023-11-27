@@ -1,6 +1,6 @@
 module github.com/tecnologer/harmonicLines
 
-go 1.21.1
+go 1.21
 
 require github.com/ebitengine/oto/v3 v3.1.0
 
